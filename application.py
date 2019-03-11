@@ -16,12 +16,15 @@ app = Flask(__name__)
 app.config["TEMPLATES_AUTO_RELOAD"] = True
 
 # Ensure responses aren't cached
+
+
 @app.after_request
 def after_request(response):
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     response.headers["Expires"] = 0
     response.headers["Pragma"] = "no-cache"
     return response
+
 
 # Custom filter
 app.jinja_env.filters["usd"] = usd
@@ -47,6 +50,11 @@ def index():
 @login_required
 def buy():
     """Buy shares of stock"""
+    # display form - get stock, number of shares
+    # add stock to user's portfolio
+    # - can the user afford the stock
+    # - buy the stock
+    # update cash
     return apology("TODO")
 
 
@@ -115,13 +123,29 @@ def logout():
 @login_required
 def quote():
     """Get stock quote."""
+    # display form
+    # retrieve stock quote
+    # display stock
     return apology("TODO")
 
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
     """Register user"""
-    return apology("TODO")
+    # Forget any user_id
+    session.clear()
+
+    # display form
+    # check passwords
+    # add user to database - store hash password
+    # db.excecute("INSERT INTO users(username, hash) VALUES(:username, :hash)", username = request.form.get("username"), hash = hash)
+    # log them in
+
+    # username=request.form.get("username")
+    # username=request.form.get("password")
+    # username=request.form.get("password_confirmation")
+
+    return render_template("register.html")
 
 
 @app.route("/sell", methods=["GET", "POST"])
