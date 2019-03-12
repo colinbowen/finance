@@ -1,5 +1,7 @@
 {% extends "layout.html" %} {% block title %} Log In {% endblock %} {% block
 main %}
+<p>A share of {{ name }} costs ${{ price }}</p>
+<br />
 <form action="/quote" method="post">
   <div class="form-group">
     <input
@@ -13,4 +15,5 @@ main %}
   </div>
   <button class="btn btn-primary" type="submit">Get Quote</button>
 </form>
+
 {% endblock %}

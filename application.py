@@ -43,7 +43,7 @@ db = SQL("sqlite:///finance.db")
 @login_required
 def index():
     """Show portfolio of stocks"""
-    return apology("TODO")
+    return render_template("dash.html")
 
 
 @app.route("/buy", methods=["GET", "POST"])
@@ -51,11 +51,18 @@ def index():
 def buy():
     """Buy shares of stock"""
     # display form - get stock, number of shares
-    # add stock to user's portfolio
+    ticker = request.form.get("ticker")
+    amount = request.form.get("amount")
+    price = request.form.get("price")
     # - can the user afford the stock
+    cash = db.execute("SELECT cash from users WHERE id = 1")
+    total_price = amount * price
     # - buy the stock
+    db.execute("INSERT INTO portfolio() VALUES ()")
     # update cash
-    return apology("TODO")
+    db.execute("UPDATE users SET cash WHERE cash - " +
+               total_price + " WHERE id = 1")
+    return render_template("dash.html")
 
 
 @app.route("/check", methods=["GET"])
@@ -126,7 +133,18 @@ def quote():
     # display form
     # retrieve stock quote
     # display stock
-    return apology("TODO")
+    if request.method == "POST":
+        if not request.form.get("symbol"):
+            return apology("Must include a ticker to search.", 403)
+
+        quote = lookup(request.form.get("symbol"))
+        ticker = quote['symbol']
+        name = quote['name']
+        price = quote['price']
+
+        return render_template("quoted.html", name=name, ticker=ticker, price=price)
+
+    return render_template("quote.html")
 
 
 @app.route("/register", methods=["GET", "POST"])
@@ -134,18 +152,37 @@ def register():
     """Register user"""
     # Forget any user_id
     session.clear()
+    # User reached route via POST (as by submitting a form via POST)
+    if request.method == "POST":
+        # display form
 
-    # display form
-    # check passwords
-    # add user to database - store hash password
-    # db.excecute("INSERT INTO users(username, hash) VALUES(:username, :hash)", username = request.form.get("username"), hash = hash)
-    # log them in
+        # Ensure username was submitted
+        if not request.form.get("username"):
+            return apology("must provide username", 403)
 
-    # username=request.form.get("username")
-    # username=request.form.get("password")
-    # username=request.form.get("password_confirmation")
+        # Ensure password was submitted
+        elif not request.form.get("password"):
+            return apology("must provide password", 403)
 
-    return render_template("register.html")
+        hash = generate_password_hash(request.form.get("password"), "sha256")
+
+        # add user to database - store hash password
+        db.execute("INSERT INTO users(username, hash) VALUES(:username, :hash)",
+                   username=request.form.get("username"), hash=hash)
+
+        # log them in
+        # Query database for username
+        rows = db.execute("SELECT * FROM users WHERE username = :username",
+                          username=request.form.get("username"))
+
+        # Remember which user has logged in
+        session["user_id"] = rows[0]["id"]
+
+        # Redirect user to home page
+        return redirect("/")
+
+    else:
+        return render_template("register.html")
 
 
 @app.route("/sell", methods=["GET", "POST"])
