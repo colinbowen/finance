@@ -7,31 +7,25 @@ main %}
       <th scope="col">Name</th>
       <th scope="col">Shares</th>
       <th scope="col">Price</th>
-      <th scope="col">TOTAL COST</th>
+      <th scope="col">Total</th>
     </tr>
   </thead>
   <tbody>
+    {% for s in user_portfolio %}
     <tr>
-      <th scope="row">NFLX</th>
-      <td>Netflix Inc</td>
-      <td>2</td>
-      <td>$450</td>
-      <td>$900</td>
+      <th scope="row">{{ s["ticker"] }}</th>
+      <td>{{ s["ticker"] }}</td>
+      <td>{{ s["SUM(amount)"] }}</td>
+      <td>${{ s["price"] }}</td>
+      <td>
+        ${{ (s["price"] * s["SUM(amount)"]) | round(precision=2, method='common') }}
+      </td>
     </tr>
-    <tr>
-      <th scope="row">FB</th>
-      <td>Facebook</td>
-      <td>2</td>
-      <td>$280</td>
-      <td>$560</td>
-    </tr>
-    <tr>
-      <th scope="row">GOOG</th>
-      <td>Google</td>
-      <td>1</td>
-      <td>$170</td>
-      <td>$170</td>
-    </tr>
+    {% endfor %}
+    <tfoot>
+      <td>Cash</td>
+      <td>${{ cash | round(precision=2, method='common') }}</td>
+    </tfoot>
   </tbody>
 </table>
 {% endblock %}

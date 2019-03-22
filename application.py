@@ -7,6 +7,8 @@ from tempfile import mkdtemp
 from werkzeug.exceptions import default_exceptions, HTTPException, InternalServerError
 from werkzeug.security import check_password_hash, generate_password_hash
 
+import datetime
+
 from helpers import apology, login_required, lookup, usd
 
 # Configure application
@@ -43,7 +45,31 @@ db = SQL("sqlite:///finance.db")
 @login_required
 def index():
     """Show portfolio of stocks"""
-    return render_template("dash.html")
+    name = "Netflix Inc."
+    user_info = db.execute(
+        "SELECT * from users WHERE id = :id", id=session["user_id"])
+    user_portfolio = db.execute(
+        "SELECT ticker, price, SUM(amount) FROM portfolio WHERE user = :id GROUP BY ticker", id=session["user_id"])
+    symbol = db.execute(
+        "SELECT ticker FROM portfolio WHERE user = :id", id=session["user_id"])
+    amount = db.execute(
+        "SELECT amount FROM portfolio WHERE user = :id", id=session["user_id"])
+    total_amount = db.execute(
+        "SELECT SUM(amount) FROM portfolio WHERE user = :id", id=session["user_id"])
+    total_amount = total_amount[0]['SUM(amount)']
+    purchase_price = db.execute(
+        "SELECT price FROM portfolio WHERE user = :id", id=session["user_id"])
+    current_price = {}
+    for x in symbol:
+        current_price[x['ticker']] = lookup(x['ticker'])
+    # total_purchase = purchase_price * amount
+    # total_purchase = db.execute(
+    #    "SELECT price FROM portfolio WHERE user = :id", id=session["user_id"])
+    cash = user_info[0]["cash"]
+    # current_total = cash + current_price * amount
+    # profit = current_total-total_purchase
+    # return render_template("dash.html", symbol=symbol, name=name, amount=amount, price=price, total=total, cash=cash, profit=profit)
+    return render_template("dash.html", user_portfolio=user_portfolio, symbol=symbol, name=name, amount=amount, price=purchase_price, total=total_amount, cash=cash, current_price=current_price)
 
 
 @app.route("/buy", methods=["GET", "POST"])
@@ -51,18 +77,46 @@ def index():
 def buy():
     """Buy shares of stock"""
     # display form - get stock, number of shares
-    ticker = request.form.get("ticker")
-    amount = request.form.get("amount")
-    price = request.form.get("price")
-    # - can the user afford the stock
-    cash = db.execute("SELECT cash from users WHERE id = 1")
-    total_price = amount * price
-    # - buy the stock
-    db.execute("INSERT INTO portfolio() VALUES ()")
-    # update cash
-    db.execute("UPDATE users SET cash WHERE cash - " +
-               total_price + " WHERE id = 1")
-    return render_template("dash.html")
+    if request.method == "POST":
+        if not request.form.get("symbol"):
+            return apology("Enter correct ticker")
+        else:
+            ticker = request.form.get("symbol")
+        if not request.form.get("amount"):
+            return apology("Must purchase an amount of stock.")
+        else:
+            amount = int(request.form.get("amount"))
+
+        if amount < 1:
+            return apology("Must purchase an amount of stock greater than 0.")
+        price = lookup(ticker)
+        price = price['price']
+        # - can the user afford the stock
+        # Query database for username
+        cash = db.execute(
+            "SELECT cash from users WHERE id = :id", id=session["user_id"])
+        available_cash = cash[0]["cash"]
+        total_price = amount * price
+        # if not return apology
+        if total_price > available_cash:
+            return apology("Cannot afford stock. :(")
+
+        date = str(datetime.datetime.now())
+
+        # - buy the stock
+        db.execute("INSERT INTO portfolio(user, amount, ticker, price, timestamp) VALUES (:user, :amount, :ticker, :price, :timestamp)",
+                   user=session["user_id"], amount=amount, ticker=ticker, price=price, timestamp=date)
+        # update cash
+
+        new_cash = available_cash - total_price
+        db.execute("UPDATE users SET cash = :cash_left WHERE id = :id",
+                   cash_left=new_cash, id=session["user_id"])
+
+        return render_template("dash.html")
+
+    # User reached route via GET (as by clicking a link or via redirect)
+    else:
+        return render_template("buy.html")
 
 
 @app.route("/check", methods=["GET"])
@@ -189,7 +243,10 @@ def register():
 @login_required
 def sell():
     """Sell shares of stock"""
-    return apology("TODO")
+    if request.method == "POST":
+        pass
+    else:
+        return render_template("sell.html")
 
 
 def errorhandler(e):
