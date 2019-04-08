@@ -89,6 +89,9 @@ def buy():
 
         if amount < 1:
             return apology("Must purchase an amount of stock greater than 0.")
+        check = lookup(ticker)
+        if not check:
+            return apology("Invalid Symbol")
         price = lookup(ticker)
         price = price['price']
         # - can the user afford the stock
@@ -106,6 +109,7 @@ def buy():
         # - buy the stock
         db.execute("INSERT INTO portfolio(user, amount, ticker, price, timestamp) VALUES (:user, :amount, :ticker, :price, :timestamp)",
                    user=session["user_id"], amount=amount, ticker=ticker, price=price, timestamp=date)
+
         # update cash
 
         new_cash = available_cash - total_price
@@ -129,7 +133,9 @@ def check():
 @login_required
 def history():
     """Show history of transactions"""
-    return apology("TODO")
+    rows = db.execute(
+        "SELECT ticker, amount, price, timestamp FROM portfolio WHERE user=:id", id=session["user_id"])
+    return render_template("history.html", rows=rows)
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -243,10 +249,47 @@ def register():
 @login_required
 def sell():
     """Sell shares of stock"""
+    user_portfolio = db.execute(
+        "SELECT ticker, price, SUM(amount) FROM portfolio WHERE user = :id GROUP BY ticker", id=session["user_id"])
     if request.method == "POST":
-        pass
+
+        symbol = request.form.get("symbol")
+        amount = request.form.get("amount")
+        valid_amount = 0
+
+        # check amount of shares is available to sell.
+        if not amount:
+            return apology("must provide an amount of shares greater than 0.", 403)
+        for stock in user_portfolio:
+            if stock["ticker"] == symbol:
+                valid_amount = int(stock["SUM(amount)"])
+                if int(amount) > int(valid_amount):
+                    return apology("Can only sell shares that you own. You don't have enough shares.", 403)
+
+        # sell shares.
+        # update available cash by selling at current market price via lookup
+        # update cash
+        cash = db.execute(
+            "SELECT cash from users WHERE id = :id", id=session["user_id"])
+        available_cash = cash[0]["cash"]
+        price = lookup(symbol)
+        price = price['price']
+        amount = int(amount)
+        total_price = amount * price
+        new_cash = available_cash + total_price
+        db.execute("UPDATE users SET cash = :cash_left WHERE id = :id",
+                   cash_left=new_cash, id=session["user_id"])
+        amount = amount * -1
+
+        date = str(datetime.datetime.now())
+        # - buy the stock
+        db.execute("INSERT INTO portfolio(user, amount, ticker, price, timestamp) VALUES (:user, :amount, :ticker, :price, :timestamp)",
+                   user=session["user_id"], amount=amount, ticker=symbol, price=price, timestamp=date)
+        return redirect("/")
     else:
-        return render_template("sell.html")
+        stocks = db.execute(
+            "SELECT ticker FROM portfolio WHERE user=:id GROUP BY ticker", id=session["user_id"])
+        return render_template("sell.html", user_portfolio=user_portfolio)
 
 
 def errorhandler(e):
