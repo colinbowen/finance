@@ -49,7 +49,7 @@ def index():
     user_info = db.execute(
         "SELECT * from users WHERE id = :id", id=session["user_id"])
     user_portfolio = db.execute(
-        "SELECT ticker, price, SUM(amount) FROM portfolio WHERE user = :id GROUP BY ticker", id=session["user_id"])
+        "SELECT ticker, price, SUM(amount) FROM portfolio WHERE user = :id GROUP BY ticker HAVING SUM(amount) > 0", id=session["user_id"])
     symbol = db.execute(
         "SELECT ticker FROM portfolio WHERE user = :id", id=session["user_id"])
     amount = db.execute(
@@ -116,7 +116,7 @@ def buy():
         db.execute("UPDATE users SET cash = :cash_left WHERE id = :id",
                    cash_left=new_cash, id=session["user_id"])
 
-        return render_template("dash.html")
+        return redirect("/")
 
     # User reached route via GET (as by clicking a link or via redirect)
     else:
@@ -134,7 +134,7 @@ def check():
 def history():
     """Show history of transactions"""
     rows = db.execute(
-        "SELECT ticker, amount, price, timestamp FROM portfolio WHERE user=:id", id=session["user_id"])
+        "SELECT ticker, amount, price, timestamp FROM portfolio WHERE user=:id ORDER BY timestamp DESC", id=session["user_id"])
     return render_template("history.html", rows=rows)
 
 
@@ -250,7 +250,7 @@ def register():
 def sell():
     """Sell shares of stock"""
     user_portfolio = db.execute(
-        "SELECT ticker, price, SUM(amount) FROM portfolio WHERE user = :id GROUP BY ticker", id=session["user_id"])
+        "SELECT ticker, price, SUM(amount) FROM portfolio WHERE user = :id GROUP BY ticker HAVING SUM(amount) > 0", id=session["user_id"])
     if request.method == "POST":
 
         symbol = request.form.get("symbol")
