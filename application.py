@@ -51,7 +51,7 @@ def index():
     user_portfolio = db.execute(
         "SELECT ticker, price, SUM(amount) FROM portfolio WHERE user = :id GROUP BY ticker HAVING SUM(amount) > 0", id=session["user_id"])
     symbol = db.execute(
-        "SELECT ticker FROM portfolio WHERE user = :id", id=session["user_id"])
+        "SELECT ticker, SUM(amount) FROM portfolio WHERE user = :id GROUP BY ticker HAVING SUM(amount) > 0", id=session["user_id"])
     amount = db.execute(
         "SELECT amount FROM portfolio WHERE user = :id", id=session["user_id"])
     total_amount = db.execute(
@@ -63,14 +63,8 @@ def index():
     myset = list({v['ticker']: v for v in symbol}.values())
     for x in myset:
         current_price[x['ticker']] = lookup(x['ticker'])
-
-    # total_purchase = purchase_price * amount
-    # total_purchase = db.execute(
-    #    "SELECT price FROM portfolio WHERE user = :id", id=session["user_id"])
     cash = user_info[0]["cash"]
-    # current_total = cash + current_price * amount
-    # profit = current_total-total_purchase
-    # return render_template("dash.html", symbol=symbol, name=name, amount=amount, price=price, total=total, cash=cash, profit=profit)
+
     return render_template("dash.html", user_portfolio=user_portfolio, symbol=symbol, name=name, amount=amount, price=purchase_price, total=total_amount, cash=cash, current_price=current_price)
 
 
@@ -136,15 +130,20 @@ def check():
 
     Recall that jsonify in Flask can return a value in JSON format.
     """
-    def checkDB(username, db):
-        pass
+    def checkDB(username):
+        names_list = []
+        inList = False
+        usersDB = db.execute("SELECT username FROM users")
+        for name in usersDB:
+            names_list.append(name['username'])
+        if username in names_list:
+            inList = True
+        return inList
     username = request.form.get("username")
-    database = {}
-    if len(username) > 1:
-        checkDB(username, database)
-        return jsonify("true")
+    if len(username) > 1 and not checkDB(username):
+        return jsonify(available="true")
     else:
-        return jsonify("false")
+        return jsonify(available="false")
 
 
 @app.route("/history")
