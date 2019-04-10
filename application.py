@@ -60,8 +60,10 @@ def index():
     purchase_price = db.execute(
         "SELECT price FROM portfolio WHERE user = :id", id=session["user_id"])
     current_price = {}
-    for x in symbol:
+    myset = list({v['ticker']: v for v in symbol}.values())
+    for x in myset:
         current_price[x['ticker']] = lookup(x['ticker'])
+
     # total_purchase = purchase_price * amount
     # total_purchase = db.execute(
     #    "SELECT price FROM portfolio WHERE user = :id", id=session["user_id"])
@@ -89,8 +91,8 @@ def buy():
 
         if amount < 1:
             return apology("Must purchase an amount of stock greater than 0.")
-        check = lookup(ticker)
-        if not check:
+        checkLookup = lookup(ticker)
+        if not checkLookup:
             return apology("Invalid Symbol")
         price = lookup(ticker)
         price = price['price']
@@ -125,8 +127,24 @@ def buy():
 
 @app.route("/check", methods=["GET"])
 def check():
-    """Return true if username available, else false, in JSON format"""
-    return jsonify("TODO")
+    """Return true if username available, else false, in JSON format
+
+    If the value of username is of length at least 1 and does not already belong
+    to a user in the database, the route should return, in JSON format, true,
+    signifying that the username is (as of that moment) available.
+    Else it should return, in JSON format, false.
+
+    Recall that jsonify in Flask can return a value in JSON format.
+    """
+    def checkDB(username, db):
+        pass
+    username = request.form.get("username")
+    database = {}
+    if len(username) > 1:
+        checkDB(username, database)
+        return jsonify("true")
+    else:
+        return jsonify("false")
 
 
 @app.route("/history")
